@@ -16,7 +16,9 @@ import net.irisshaders.iris.pipeline.programs.ShaderKey;
 import net.irisshaders.iris.shadows.ShadowRenderer;
 import net.irisshaders.iris.uniforms.CapturedRenderingState;
 import net.irisshaders.iris.uniforms.SystemTimeUniforms;
+import net.irisshaders.iris.vertices.ImmediateState;
 import net.minecraft.client.Camera;
+import net.minecraft.client.DeltaTracker;
 import net.minecraft.client.gui.components.debug.DebugEntrySystemSpecs;
 import net.minecraft.client.renderer.FirstPersonHandsAndItemsRenderer;
 import net.minecraft.client.renderer.item.ItemModelResolver;
@@ -87,5 +89,17 @@ public class MixinGameRenderer {
 	@Inject(method = "renderLevel", at = @At("TAIL"))
 	private void iris$runColorSpace(CallbackInfo ci) {
 		Iris.getPipelineManager().getPipeline().ifPresent(WorldRenderingPipeline::finalizeGameRendering);
+	}
+
+		// Set isRenderingLevel to trigger undo reverse z in other mixin.
+	// This is the place where vanilla generate projection matrix from data, then captured by sodium and iris.
+	@Inject(method = "extract", at = @At(value = "HEAD"))
+	private void iris$undoReverseZ(DeltaTracker deltaTracker, boolean advanceGameTime, CallbackInfo ci) {
+		ImmediateState.isRenderingLevel = true;
+	}
+
+	@Inject(method = "extract", at = @At(value = "RETURN"))
+	private void iris$restoreReverseZ(DeltaTracker deltaTracker, boolean advanceGameTime, CallbackInfo ci) {
+		ImmediateState.isRenderingLevel = false;
 	}
 }
